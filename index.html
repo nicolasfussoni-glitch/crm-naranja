@@ -6,65 +6,44 @@
     <title>CRM Comercial - Naranja X</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    
     <style>
-        :root {
-            --primary-color: #ff6600; 
-            --secondary-color: #333; 
-            --light-bg: #f4f6f9; 
-            --kanban-bg: #e9eef2;
-        }
+        :root { --primary-color: #ff6600; --secondary-color: #333; --light-bg: #f4f6f9; --kanban-bg: #e9eef2; }
         body { font-family: 'Roboto', sans-serif; background-color: var(--light-bg); font-size: 0.85rem; overflow: hidden; }
-        
-        /* LOGIN LOCK */
         #login-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(244,246,249,0.98); z-index:9999; display:flex; justify-content:center; align-items:center; flex-direction:column; }
         .login-card { background:white; padding:40px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.1); width:100%; max-width:380px; text-align:center; border-top:5px solid var(--primary-color); }
         #app-content { filter:blur(10px); pointer-events:none; transition:all 0.5s; opacity:0.3; height: 100vh; overflow:hidden;}
         .app-unlocked { filter:none !important; pointer-events:auto !important; opacity:1 !important; overflow:auto !important; }
-
-        /* UI ELEMENTS */
         .navbar { background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .navbar-brand { font-weight: 700; color: var(--primary-color) !important; font-size: 1.4rem; }
-        .nav-link { cursor: pointer; font-weight: 500; color: #666; }
+        .nav-link { cursor: pointer; font-weight: 500; color: #666; margin-left: 15px; }
         .nav-link.active { color: var(--primary-color) !important; border-bottom: 2px solid var(--primary-color); }
-        
-        /* KPIs & Metrics */
         .kpi-card { cursor: pointer; transition: all 0.2s; }
         .kpi-card:hover { transform: translateY(-3px); border-color: #ddd; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
         .kpi-number { font-size: 1.8rem; font-weight: 800; color: var(--primary-color); }
         .kpi-card-header { font-size: 0.75rem; text-transform: uppercase; font-weight: bold; color: #666; }
-
         .kanban-column { background-color: var(--kanban-bg); border-radius: 8px; padding: 10px; height: calc(100vh - 420px); overflow-y: auto; }
         .kanban-card { background: white; border-radius: 6px; padding: 10px; margin-bottom: 8px; border-left: 4px solid #ddd; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .kanban-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .campaign-tag { display: inline-block; font-size: 0.65em; font-weight: bold; color: white; padding: 2px 6px; border-radius: 3px; margin-bottom: 5px; }
-
         .calendar-wrapper { overflow-x: auto; }
         .calendar-header { display: flex; border-bottom: 1px solid #ddd; }
         .cal-day-header { flex: 1; text-align: center; font-size: 0.7rem; color: #888; min-width: 20px; border-right: 1px solid #eee; }
         .cal-campaign-bar { height: 10px; border-radius: 5px; margin-bottom: 3px; font-size: 0.6rem; color: white; padding-left: 4px; white-space: nowrap; overflow: hidden; opacity: 0.9; }
-
         .list-group-item-action { cursor: pointer; }
         .merchant-ids-container { max-height: 80px; overflow-y: auto; background: #fff; border: 1px solid #ddd; padding: 5px; font-size: 0.85em; }
-        
         .timeline-container { max-height: 200px; overflow-y: auto; }
         .timeline-item { border-left: 2px solid #ddd; padding-left: 15px; margin-bottom: 10px; position: relative; }
         .timeline-item::before { content: ''; position: absolute; left: -5px; top: 0; width: 8px; height: 8px; background: var(--primary-color); border-radius: 50%; }
-        
         .badge-strategy { font-size: 0.8em; padding: 4px 8px; border-radius: 12px; }
         .bg-migracion { background: #e6f7ff; color: #0050b3; border: 1px solid #91d5ff; }
         .bg-retencion { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
         .bg-ticket-alto { background: #fff7e6; color: #d46b08; border: 1px solid #ffd591; }
-        
         .card-actions { display: flex; justify-content: space-between; margin-top: 8px; padding-top: 5px; border-top: 1px solid #eee; }
-        .btn-move { padding: 0px 6px; font-size: 0.7rem; }
         .filter-box { max-height: 100px; overflow-y: auto; background: #fff; border: 1px solid #ced4da; border-radius: 4px; padding: 5px; }
         .alert-link { color: var(--primary-color); cursor: pointer; text-decoration: underline; font-weight: bold; font-size: 0.8rem; }
         .text-danger-custom { color: #dc3545; font-weight: bold; font-size: 0.8rem; }
-        
         #sync-status { font-size: 0.8rem; margin-right: 15px; font-weight: bold; }
         .status-saved { color: #28a745; } .status-saving { color: #ffc107; } .status-error { color: #dc3545; }
+        #loading-data { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9000; display:none; flex-direction:column; justify-content:center; align-items:center; }
     </style>
 </head>
 <body>
@@ -81,6 +60,11 @@
             <p id="login-error" class="text-danger mt-2 small fw-bold"></p>
         </div>
     </div>
+</div>
+
+<div id="loading-data">
+    <div class="spinner-border text-warning" style="width: 3rem; height: 3rem;" role="status"></div>
+    <div class="mt-3 fw-bold text-secondary">Sincronizando Base de Datos...</div>
 </div>
 
 <div id="app-content">
@@ -125,7 +109,6 @@
                         <div class="col-4"><div class="card h-100 text-center shadow-sm kpi-card" onclick="openKpiList('gestion')"><div class="card-body py-2"><div class="kpi-card-header">En Gestión</div><div class="kpi-number text-warning" id="kpi-gestion">0</div><span class="kpi-subtext">Ver listado</span></div></div></div>
                         <div class="col-4"><div class="card h-100 text-center shadow-sm kpi-card" onclick="openKpiList('active')"><div class="card-body py-2"><div class="kpi-card-header">Activas</div><div class="kpi-number text-primary" id="kpi-active">0</div><span class="kpi-subtext">Ver detalle</span></div></div></div>
                         <div class="col-4"><div class="card h-100 text-center shadow-sm kpi-card" onclick="openKpiList('closed')"><div class="card-body py-2"><div class="kpi-card-header">Definidas</div><div class="kpi-number text-success" id="kpi-closed">0</div><span class="kpi-subtext" id="kpi-missing">Faltan: 0</span></div></div></div>
-                        
                         <div class="col-12 mt-2"><div class="card h-100 border-start border-4 border-danger shadow-sm"><div class="card-header bg-white py-1 small fw-bold text-danger">Alertas Vencimiento (3 días)</div><div class="card-body p-0" id="alerts-box"></div></div></div>
                     </div>
                 </div>
@@ -157,13 +140,7 @@
                             </div>
                         </div>
                         <div class="row mt-2 g-2">
-                             <div class="col-md-12 text-end small">
-                                <span class="text-muted me-2">Opcional:</span>
-                                <div class="d-inline-flex gap-2">
-                                    <input type="number" class="form-control form-control-sm" style="width:90px" id="min-coupons" placeholder="Mín Cup.">
-                                    <input type="number" class="form-control form-control-sm" style="width:90px" id="min-tpv" placeholder="Mín TPV">
-                                </div>
-                             </div>
+                             <div class="col-md-12 text-end small"><span class="text-muted me-2">Opcional:</span><div class="d-inline-flex gap-2"><input type="number" class="form-control form-control-sm" style="width:90px" id="min-coupons" placeholder="Mín Cup."><input type="number" class="form-control form-control-sm" style="width:90px" id="min-tpv" placeholder="Mín TPV"></div></div>
                         </div>
                     </div>
                 </div>
@@ -187,7 +164,7 @@
 
 <script>
     // --- PEGA TU URL DE GOOGLE APPS SCRIPT AQUÍ ---
-    const API_URL = "https://script.google.com/a/macros/naranjax.com/s/AKfycbz22fRiJVlg1eGqLNexMSpvp16ZH9cwaPgHzpsRQhYPguoUZOkx0NkHYhWlZ8YkIfcp/exec"; 
+    const API_URL = "https://script.google.com/a/macros/naranjax.com/s/AKfycbz23FgxBQqtd1EMA6s3-qBAxZXj5jq_XY7F2kGkvRCNNREPhEXShSoDmPLjI-oT3_Hz/exec"; 
 
     // VARIABLES
     let user=null, pass=null, db=[], campaigns=[];
@@ -231,10 +208,12 @@
     // --- SYNC ---
     async function loadDB() {
         if(!API_URL.includes("PEGAR")) {
+            document.getElementById('loading-data').style.display = 'flex';
             const res = await fetch(API_URL, {method:'POST', body:JSON.stringify({action:"read", auth:{user,pass}})});
             const d = await res.json();
             if(d.clients && d.clients.length) { db=d.clients; campaigns=d.campaigns||[]; }
             else { genDummy(); saveData(); }
+            document.getElementById('loading-data').style.display = 'none';
         } else { genDummy(); }
         init();
     }
@@ -249,7 +228,6 @@
         setTimeout(()=>s.innerHTML='', 2000);
     }
 
-    // --- LOGIC ---
     function init() {
         renderTable();
         renderCamps();
@@ -329,7 +307,7 @@
             myChart = new Chart(document.getElementById('salesChart'), {
                 type: 'line',
                 data: { labels: c.monthlyStats.map(m=>m.month), datasets:[{label:'Ventas', data:c.monthlyStats.map(m=>m.tpv), borderColor:'#ff6600', backgroundColor:'rgba(255,102,0,0.1)', fill:true}] },
-                options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}, x:{grid:{display:false}}} }
+                options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:(x)=>[fmt.format(x.raw), `Cup: ${c.monthlyStats[x.dataIndex].coupons}`, `Ticket: ${fmt.format(c.monthlyStats[x.dataIndex].avgTicket)}`]}}}, scales:{y:{beginAtZero:true}, x:{grid:{display:false}}} }
             });
         }, 200);
     }
@@ -340,11 +318,7 @@
         const c = db.find(x => x.id === currentModalClientId);
         c.history.push({date: new Date().toLocaleString(), text: txt});
         
-        // INTEGRACIÓN KANBAN: Si gestiono y no está en el tablero, lo sumo
-        if(!c.kanbanStatus) { 
-            c.kanbanStatus = 'todo'; 
-            c.campaignName = "Gestión Individual"; 
-        }
+        if(!c.kanbanStatus) { c.kanbanStatus = 'todo'; c.campaignName = "Gestión Individual"; }
         
         saveData();
         renderTimeline(c);
@@ -399,8 +373,6 @@
                 const color = getColor(c.campaignName);
                 const card = document.createElement('div');
                 card.className = 'kanban-card';
-                card.onclick = (e) => { if(!e.target.closest('button')) openModal(c.id); };
-                
                 card.innerHTML = `
                     <span class="campaign-tag" style="background:${color}">${c.campaignName}</span>
                     <div class="kanban-card-title">${c.fantasyName}</div>
@@ -409,6 +381,7 @@
                         <button class="btn btn-outline-secondary btn-sm btn-move" onclick="move(${c.id}, -1)"><i class="fas fa-chevron-left"></i></button>
                         <button class="btn btn-outline-primary btn-sm btn-move" onclick="move(${c.id}, 1)"><i class="fas fa-chevron-right"></i></button>
                     </div>`;
+                card.addEventListener('click', (e) => { if(!e.target.closest('button')) openModal(c.id); });
                 col.appendChild(card);
             }
         });
@@ -443,7 +416,21 @@
         document.getElementById('kpi-missing').innerText = "Faltan: " + (db.length - (counts.todo+counts.contact+counts.action+counts.done));
     }
 
-    // DRILL DOWN (KPIs & Alertas)
+    function checkAlerts() {
+        const box = document.getElementById('alerts-box');
+        box.innerHTML = '';
+        const today = new Date();
+        let has = false;
+        campaigns.forEach(c => {
+            const days = Math.ceil((new Date(c.end) - today) / (1000*60*60*24));
+            if(days >= 0 && days <= 3) {
+                has = true;
+                box.innerHTML += `<div class="alert-item"><div><strong>${c.name}</strong> <small class="text-danger-custom">Vence: ${days} días</small></div><span class="alert-link" onclick="openList('camp', '${c.name}')">Ver</span></div>`;
+            }
+        });
+        if(!has) box.innerHTML = '<div class="p-2 small text-muted fst-italic">Sin vencimientos próximos</div>';
+    }
+
     function openKpiList(type) {
         let items = [], title = "";
         if(type==='gestion') { title="En Gestión"; items = db.filter(c=>['todo','contact'].includes(c.kanbanStatus)); }
@@ -488,22 +475,6 @@
         }
     }
 
-    function checkAlerts() {
-        const box = document.getElementById('alerts-box');
-        box.innerHTML = '';
-        const today = new Date();
-        let has = false;
-        campaigns.forEach(c => {
-            const days = Math.ceil((new Date(c.end) - today) / (1000*60*60*24));
-            if(days >= 0 && days <= 3) {
-                has = true;
-                box.innerHTML += `<div class="alert-item"><div><strong>${c.name}</strong> <small class="text-danger-custom">Vence: ${days} días</small></div><span class="alert-link" onclick="openList('camp', '${c.name}')">Ver comercios</span></div>`;
-            }
-        });
-        if(!has) box.innerHTML = '<div class="p-2 small text-muted fst-italic">Sin vencimientos próximos</div>';
-    }
-
-    // HELPERS
     function switchTab(t) {
         document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
         event.target.classList.add('active');
@@ -516,19 +487,9 @@
     function renderCamps() {
         const c = document.getElementById('campaigns-grid'); c.innerHTML='';
         const camps = [
-            {t:'Plan Zeta',d:'Arancel 6.5%',b:'bg-migracion'},{t:'12 Cuotas',d:'Arancel 22%',b:'bg-ticket-alto'},{t:'Promo Zeta',d:'Arancel 2.15%',b:'bg-retencion'}
+            {t:'Migración',d:'Arancel 6.5%',b:'bg-migracion'},{t:'12 Cuotas',d:'Arancel 22%',b:'bg-ticket-alto'},{t:'Promo Zeta',d:'Arancel 2.15%',b:'bg-retencion'}
         ]; 
         camps.forEach(x => c.innerHTML += `<div class="col-md-4"><div class="card h-100 shadow-sm border-start border-4 border-warning"><div class="card-body"><span class="badge ${x.b} mb-2">${x.t}</span><p class="small text-muted">${x.d}</p></div></div></div>`);
-    }
-
-    function renderCalendar() {
-        const b = document.getElementById('cal-body'); b.innerHTML='';
-        document.getElementById('cal-header').innerHTML = Array.from({length:31},(_,i)=>`<div class="cal-day-header">${i+1}</div>`).join('');
-        campaigns.forEach(c => {
-            const start = parseInt(c.start.split('-')[2]); const end = parseInt(c.end.split('-')[2]);
-            const w = ((end-start+1)/31)*100; const l = ((start-1)/31)*100;
-            b.innerHTML += `<div class="cal-campaign-bar" style="margin-left:${l}%; width:${w}%; background:${getColor(c.name)}">${c.name}</div>`;
-        });
     }
 
     function popFilters() {
