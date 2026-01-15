@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Comercial - Naranja X</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        :root { --primary-color: #ff6600; --secondary-color: #333; --light-bg: #f4f6f9; --kanban-bg: #e9eef2; }
+        body { font-family: 'Roboto', sans-serif; background-color: var(--light-bg); font-size: 0.85rem; overflow: hidden; }
+        
+        /* LOGIN LOCK */
+        #login-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(244,246,249,0.98); z-index:9999; display:flex; justify-content:center; align-items:center; flex-direction:column; }
+        .login-card { background:white; padding:40px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.1); width:100%; max-width:380px; text-align:center; border-top:5px solid var(--primary-color); }
+        #app-content { filter:blur(10px); pointer-events:none; transition:all 0.5s; opacity:0.3; height: 100vh; overflow:hidden;}
+        .app-unlocked { filter:none !important; pointer-events:auto !important; opacity:1 !important; overflow:auto !important; }
+
+        /* UI ELEMENTS */
+        .navbar { background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .navbar-brand { font-weight: 700; color: var(--primary-color) !important; font-size: 1.4rem; }
+        .nav-link { cursor: pointer; font-weight: 500; color: #666; }
+        .nav-link.active { color: var(--primary-color) !important; border-bottom: 2px solid var(--primary-color); }
+        
+        .kpi-card { cursor: pointer; transition: all 0.2s; }
+        .kpi-card:hover { transform: translateY(-3px); border-color: #ddd; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .kpi-number { font-size: 1.8rem; font-weight: 800; color: var(--primary-color); }
+        .kpi-card-header { font-size: 0.75rem; text-transform: uppercase; font-weight: bold; color: #666; }
+
+        .kanban-column { background-color: var(--kanban-bg); border-radius: 8px; padding: 10px; height: calc(100vh - 420px); overflow-y: auto; }
+        .kanban-card { background: white; border-radius: 6px; padding: 10px; margin-bottom: 8px; border-left: 4px solid #ddd; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .kanban-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        .calendar-wrapper { overflow-x: auto; }
+        .calendar-header { display: flex; border-bottom: 1px solid #ddd; }
+        .cal-day-header { flex: 1; text-align: center; font-size: 0.7rem; color: #888; min-width: 20px; border-right: 1px solid #eee; }
+        .cal-campaign-bar { height: 10px; border-radius: 5px; margin-bottom: 3px; font-size: 0.6rem; color: white; padding-left: 4px; white-space: nowrap; overflow: hidden; opacity: 0.9; }
+
+        .list-group-item-action { cursor: pointer; }
+        .merchant-ids-container { max-height: 80px; overflow-y: auto; background: #fff; border: 1px solid #ddd; padding: 5px; font-size: 0.85em; }
+        
+        .timeline-container { max-height: 200px; overflow-y: auto; }
+        .timeline-item { border-left: 2px solid #ddd; padding-left: 15px; margin-bottom: 10px; position: relative; }
+        .timeline-item::before { content: ''; position: absolute; left: -5px; top: 0; width: 8px; height: 8px; background: var(--primary-color); border-radius: 50%; }
+        
+        .badge-strategy { font-size: 0.8em; padding: 4px 8px; border-radius: 12px; }
+        .bg-migracion { background: #e6f7ff; color: #0050b3; border: 1px solid #91d5ff; }
+        .bg-retencion { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
+        .bg-ticket-alto { background: #fff7e6; color: #d46b08; border: 1px solid #ffd591; }
+        
+        #sync-status { font-size: 0.8rem; margin-right: 15px; font-weight: bold; }
+        .status-saved { color: #28a745; } .status-saving { color: #ffc107; } .status-error { color: #dc3545; }
+        .alert-link { color: var(--primary-color); cursor: pointer; text-decoration: underline; font-weight: bold; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+<div id="login-overlay">
+    <div class="login-card">
+        <div class="mb-3"><i class="fas fa-lock fa-3x text-warning"></i></div>
+        <h4 class="fw-bold">Acceso Seguro</h4>
+        <p class="text-muted small">Base de datos encriptada.</p>
+        <form onsubmit="handleLogin(event)">
+            <input type="text" class="form-control mb-2" id="login-user" placeholder="Usuario" required>
+            <input type="password" class="form-control mb-3" id="login-pass" placeholder="Contraseña" required>
+            <button type="submit" class="btn btn-primary w-100 fw-bold" id="login-btn">INGRESAR</button>
+            <p id="login-error" class="text-danger mt-2 small fw-bold"></p>
+        </form>
+    </div>
+</div>
+
+<div id="app-content">
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand"><i class="fas fa-chart-line me-2"></i>CRM Comercial</a>
+            <div class="d-flex align-items-center">
+                <span id="sync-status"></span>
+                <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
+            </div>
+            <div class="collapse navbar-collapse" id="nav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link active" onclick="switchTab('clients')">Cartera</a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="switchTab('campaigns')">Campañas</a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="switchTab('management')">Gestión</a></li>
+                    <li class="nav-item"><a class="nav-link text-danger" onclick="logout()"><i class="fas fa-power-off"></i></a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-5 pt-4 px-4">
+        
+        <div id="clients-section">
+            <div class="row mb-3 align-items-center">
+                <div class="col-md-5"><h4 class="fw-bold mb-0">Cartera Activa <span class="badge bg-secondary fs-6" id="total-clients-badge">0</span></h4></div>
+                <div class="col-md-7"><input type="text" class="form-control" id="search" placeholder="Buscar comercio..." onkeyup="filterTable()"></div>
+            </div>
+            <div class="card shadow mb-3"><div class="card-body p-0 table-responsive"><table class="table table-hover align-middle mb-0"><thead class="bg-light small text-uppercase"><tr><th class="ps-4">Comercio</th><th>CUIT</th><th>Rubro</th><th class="text-end">TPV</th><th class="text-end">Cupones</th><th class="text-center">Estrategia</th><th></th></tr></thead><tbody id="clients-table"></tbody></table></div></div>
+            <ul class="pagination justify-content-center" id="pagination"></ul>
+        </div>
+
+        <div id="campaigns-section" style="display:none;">
+            <h4 class="fw-bold mb-3">Ofertas de Valor</h4>
+            <div class="row g-3" id="campaigns-grid"></div>
+        </div>
+
+        <div id="management-section" style="display:none;">
+            <div class="row g-3 mb-3">
+                <div class="col-lg-5">
+                    <div class="row g-2 h-100">
+                        <div class="col-4"><div class="card h-100 text-center shadow-sm kpi-card" onclick="openKpiList('gestion')"><div class="card-body py-2"><div class="kpi-card-header">En Gestión</div><div class="kpi-number text-warning" id="kpi-gestion">0</div><span class="kpi-subtext">Ver listado</span></div></div></div>
+                        <div class="col-4"><div class="card h-100 text-center shadow-sm kpi-card" onclick="openKpiList('active')"><div class="card-body py-2"><div class="kpi-card-header">Activas</div><div class="kpi-number text-primary" id="kpi-active">0</div><span class="kpi-subtext">Ver detalle</span></div></div></div>
+                        <div class="col-4"><div class="card h-100 text-center shadow-sm kpi-card" onclick="openKpiList('closed')"><div class="card-body py-2"><div class="kpi-card-header">Definidas</div><div class="kpi-number text-success" id="kpi-closed">0</div><span class="kpi-subtext" id="kpi-missing">Faltan: 0</span></div></div></div>
+                        
+                        <div class="col-12 mt-2"><div class="card h-100 border-start border-4 border-danger shadow-sm"><div class="card-header bg-white py-1 small fw-bold text-danger">Alertas Vencimiento (3 días)</div><div class="card-body p-0" id="alerts-box"></div></div></div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="card h-100 shadow-sm border-0">
+                        <div class="card-header bg-white py-2"><h6 class="fw-bold m-0 small">Calendario de Acciones</h6></div>
+                        <div class="card-body p-2"><div class="calendar-wrapper"><div class="calendar-header" id="cal-header"></div><div class="calendar-body" id="cal-body"></div></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3 border-top border-4 border-primary">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between mb-2"><h6 class="fw-bold m-0 text-primary">Generador de Campañas</h6><button class="btn btn-sm btn-link p-0" onclick="document.getElementById('filters-ui').classList.toggle('d-none')">Mostrar/Ocultar</button></div>
+                    <div id="filters-ui">
+                        <div class="row g-2">
+                            <div class="col-md-2"><label class="filter-label">Rubros:</label><div class="filter-box" id="f-rubro"></div></div>
+                            <div class="col-md-2"><label class="filter-label">Ciudades:</label><div class="filter-box" id="f-city"></div></div>
+                            <div class="col-md-2"><label class="filter-label">Bancos:</label><div class="filter-box" id="f-bank"></div></div>
+                            <div class="col-md-6">
+                                <div class="bg-light p-2 rounded border">
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-6"><input type="text" class="form-control form-control-sm fw-bold" id="c-name" placeholder="Nombre Campaña"></div>
+                                        <div class="col-3"><input type="date" class="form-control form-control-sm" id="c-start"></div>
+                                        <div class="col-3"><input type="date" class="form-control form-control-sm" id="c-end"></div>
+                                    </div>
+                                    <div class="input-group input-group-sm"><span class="input-group-text">Detalle:</span><input type="text" class="form-control" id="c-desc"><button class="btn btn-primary fw-bold" onclick="createCampaign()">Generar</button></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-2">
+                <div class="col-md-4"><div class="kanban-column"><div class="kanban-column-header"><span>Por Gestionar</span><span class="badge bg-white text-dark border" id="cnt-todo">0</span></div><div id="kb-todo" class="kb-cont" data-status="todo"></div></div></div>
+                <div class="col-md-4"><div class="kanban-column"><div class="kanban-column-header"><span>En Contacto</span><span class="badge bg-white text-dark border" id="cnt-contact">0</span></div><div id="kb-contact" class="kb-cont" data-status="contact"></div></div></div>
+                <div class="col-md-4"><div class="kanban-column"><div class="kanban-column-header"><span>Acción Definida</span><span class="badge bg-white text-dark border" id="cnt-action">0</span></div><div id="kb-action" class="kb-cont" data-status="action"></div></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="clientModal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold" id="m-name">...</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body bg-light"><div class="row g-3 mb-3"><div class="col-md-4"><div class="card h-100 border-start border-4 border-warning"><div class="card-body py-2"><div class="metric-label text-warning">TPV Anual</div><div class="metric-value" id="m-tpv">$0</div></div></div></div><div class="col-md-8"><div class="card h-100 border-0 bg-white shadow-sm"><div class="card-body py-2"><h6 class="fw-bold text-dark mb-0">Oportunidad Detectada</h6><div id="m-badge" class="mb-1"></div><p class="text-muted small mb-1" id="m-desc">...</p><div class="alert alert-warning py-1 px-2 d-inline-block mb-0 small border-0 text-dark"><strong>Pitch:</strong> <span id="m-pitch">...</span></div></div></div></div></div><div class="row g-3"><div class="col-lg-8"><div class="card shadow-sm mb-3"><div class="card-body"><div class="chart-container"><canvas id="salesChart"></canvas></div></div></div></div><div class="col-lg-4"><div class="card h-100 shadow-sm"><div class="card-header bg-white fw-bold border-bottom-0 pt-3">Ficha 360°</div><div class="card-body d-flex flex-column"><ul class="list-group list-group-flush small mb-3"><li class="list-group-item px-0 d-flex justify-content-between"><span class="text-muted">CUIT:</span><span class="fw-bold font-monospace" id="m-cuit"></span></li><li class="list-group-item px-0 d-flex justify-content-between"><span class="text-muted">Rubro:</span><span class="fw-bold" id="m-rubro"></span></li><li class="list-group-item px-0 d-flex justify-content-between"><span class="text-muted">Banco:</span><span class="fw-bold text-dark" id="m-bank"></span></li><li class="list-group-item px-0"><div class="d-flex justify-content-between mb-1"><span class="text-muted">N° Comercios:</span><span class="badge bg-light text-dark border" id="m-merch-count">0</span></div><div class="merchant-ids-container" id="m-merch-ids"></div></li><li class="list-group-item px-0"><span class="text-muted d-block mb-1">Domicilio:</span><span class="text-dark" id="m-address"></span></li></ul><div class="mt-auto"><h6 class="fw-bold small border-bottom pb-1">Bitácora</h6><div class="timeline-container bg-light border rounded mb-2" id="m-timeline"></div><div class="input-group"><input type="text" class="form-control form-control-sm" id="m-note" placeholder="Nueva nota..."><button class="btn btn-primary btn-sm" onclick="saveNote()"><i class="fas fa-paper-plane"></i> Guardar</button></div></div></div></div></div></div></div></div></div></div>
+
+<div class="modal fade" id="listModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold" id="l-title">Listado</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-0"><div class="list-group list-group-flush" id="l-content" style="max-height: 400px; overflow-y: auto;"></div></div></div></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // --- PEGA TU URL DE APPS SCRIPT AQUÍ ---
+    const API_URL = https://script.google.com/a/macros/naranjax.com/s/AKfycbz22fRiJVlg1eGqLNexMSpvp16ZH9cwaPgHzpsRQhYPguoUZOkx0NkHYhWlZ8YkIfcp/exec; 
+
+    // VARS
+    let user=null, pass=null, db=[], campaigns=[];
+    let curPage=1, modalId=null, myChart=null;
+    const fmt = new Intl.NumberFormat('es-AR', {style:'currency', currency:'ARS', minimumFractionDigits:0});
+    const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+    // --- LOGIN ---
+    async function handleLogin(e) {
+        e.preventDefault();
+        const u = document.getElementById('login-user').value;
+        const p = document.getElementById('login-pass').value;
+        const btn = document.getElementById('login-btn');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        try {
+            if(API_URL.includes("PEGAR")) { // Demo Local
+                 if(u==="admin" && p==="1234") loginOK(u,p);
+                 else throw new Error("Demo: admin / 1234");
+            } else {
+                const res = await fetch(API_URL, {method:'POST', body:JSON.stringify({action:"login", user:u, pass:p})});
+                const d = await res.json();
+                if(d.status==="success") loginOK(u,p); else throw new Error(d.message);
+            }
+        } catch(err) {
+            document.getElementById('login-error').innerText = err.message;
+            btn.innerHTML = 'INGRESAR';
+        }
+    }
+
+    function loginOK(u, p) {
+        user=u; pass=p;
+        document.getElementById('login-overlay').style.display='none';
+        document.getElementById('app-content').classList.add('app-unlocked');
+        loadDB();
+    }
+
+    function logout() { location.reload(); }
+
+    // --- SYNC ---
+    async function loadDB() {
+        if(!API_URL.includes("PEGAR")) {
+            const res = await fetch(API_URL, {method:'POST', body:JSON.stringify({action:"read", auth:{user,pass}})});
+            const d = await res.json();
+            if(d.clients && d.clients.length) { db=d.clients; campaigns=d.campaigns||[]; }
+            else { genDummy(); saveData(); }
+        } else { genDummy(); }
+        init();
+    }
+
+    async function saveData() {
+        const s = document.getElementById('sync-status');
+        s.innerHTML = '<span class="status-saving"><i class="fas fa-sync fa-spin"></i></span>';
+        if(!API_URL.includes("PEGAR")) {
+            await fetch(API_URL, {method:'POST', body:JSON.stringify({action:"write", auth:{user,pass}, data:{clients:db, campaigns:campaigns}})});
+            s.innerHTML = '<span class="status-saved"><i class="fas fa-check"></i></span>';
+        }
+        setTimeout(()=>s.innerHTML='', 2000);
+    }
+
+    // --- LOGIC ---
+    function init() {
+        renderTable();
+        renderCamps();
+        popFilters();
+        renderKanban();
+        updateKPIs();
+    }
+
+    function getStrategy(c) {
+        if (['Indumentaria','Gastronomía'].includes(c.rubro)) return {n:'Promo Días', c:'bg-retencion', d:'Tráfico en fechas pico.', p:'Plan Zeta + Reintegro.'};
+        if (c.avgTicket > 150000 || c.rubro.includes('Electro')) return {n:'Financ. Larga', c:'bg-ticket-alto', d:'Ticket alto.', p:'Ofrecer 12/15 cuotas.'};
+        return {n:'Migración', c:'bg-migracion', d:'Optimizar costos.', p:'Migrar a Digital.'};
+    }
+
+    // TABLA CARTERA
+    function renderTable() {
+        const tb = document.getElementById('clients-table');
+        tb.innerHTML = '';
+        const data = db.filter(c => c.fantasyName.toLowerCase().includes(document.getElementById('search').value.toLowerCase()));
+        document.getElementById('total-clients-badge').innerText = data.length;
+        
+        const start = (curPage-1)*15;
+        data.slice(start, start+15).forEach(c => {
+            const st = getStrategy(c);
+            tb.innerHTML += `<tr class="table-row-clickable border-bottom" onclick="openModal(${c.id})">
+                <td class="ps-4 fw-bold text-dark">${c.fantasyName}<br><small class="text-muted fw-normal">${c.businessName}</small></td>
+                <td><span class="font-monospace text-secondary">${c.cuit}</span></td>
+                <td><span class="badge bg-light text-dark border mb-1">${c.rubro}</span><br><small class="text-muted">${c.city}</small></td>
+                <td class="text-end fw-bold text-primary">${fmt.format(c.tpv)}</td>
+                <td class="text-end text-muted">${c.coupons}</td>
+                <td class="text-center"><span class="badge badge-strategy ${st.c}">${st.n}</span></td>
+                <td class="text-center"><i class="fas fa-chevron-right text-muted"></i></td></tr>`;
+        });
+        
+        const pag = document.getElementById('pagination');
+        pag.innerHTML = '';
+        const tot = Math.ceil(data.length/15);
+        if(tot>1) {
+            pag.innerHTML += `<li class="page-item ${curPage==1?'disabled':''}"><a class="page-link" onclick="curPage--;renderTable()">Ant</a></li>`;
+            pag.innerHTML += `<li class="page-item active"><a class="page-link">${curPage} / ${tot}</a></li>`;
+            pag.innerHTML += `<li class="page-item ${curPage==tot?'disabled':''}"><a class="page-link" onclick="curPage++;renderTable()">Sig</a></li>`;
+        }
+    }
+
+    // MODAL
+    function openModal(id) {
+        const c = db.find(x => x.id === id);
+        if(!c) return;
+        currentModalClientId = id;
+        const st = getStrategy(c);
+
+        document.getElementById('m-name').innerText = c.fantasyName;
+        document.getElementById('m-tpv').innerText = fmt.format(c.tpv);
+        document.getElementById('modalTicketAvg').innerText = fmt.format(c.avgTicket);
+        document.getElementById('modalCouponsTotal').innerText = c.coupons + " cupones";
+        
+        document.getElementById('modalStrategyBadge').innerHTML = `<span class="badge badge-strategy ${st.c}">${st.n}</span>`;
+        document.getElementById('m-desc').innerText = st.d;
+        document.getElementById('m-pitch').innerText = st.p;
+
+        document.getElementById('m-cuit').innerText = c.cuit;
+        document.getElementById('m-rubro').innerText = c.rubro;
+        document.getElementById('m-bank').innerText = c.bank;
+        document.getElementById('m-address').innerText = c.address;
+        document.getElementById('m-merch-count').innerText = c.merchantIds.length;
+        document.getElementById('m-merch-ids').innerHTML = c.merchantIds.map(m=>`<div><i class="fas fa-store me-1 text-muted"></i>${m}</div>`).join('');
+        
+        renderTimeline(c);
+
+        const el = document.getElementById('clientModal');
+        const modal = bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el);
+        modal.show();
+
+        setTimeout(() => {
+            if(myChart) myChart.destroy();
+            myChart = new Chart(document.getElementById('salesChart'), {
+                type: 'line',
+                data: { labels: c.monthlyStats.map(m=>m.month), datasets:[{label:'Ventas', data:c.monthlyStats.map(m=>m.tpv), borderColor:'#ff6600', backgroundColor:'rgba(255,102,0,0.1)', fill:true}] },
+                options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}, x:{grid:{display:false}}} }
+            });
+        }, 200);
+    }
+
+    function saveNote() {
+        const txt = document.getElementById('m-note').value;
+        if(!txt) return;
+        const c = db.find(x => x.id === currentModalClientId);
+        c.history.push({date: new Date().toLocaleString(), text: txt});
+        // Auto-add to Kanban if not present
+        if(!c.kanbanStatus) { c.kanbanStatus = 'todo'; c.campaignName = "Gestión Individual"; }
+        saveData();
+        renderTimeline(c);
+        renderKanban();
+        updateKPIs();
+        document.getElementById('m-note').value = '';
+    }
+
+    function renderTimeline(c) {
+        const t = document.getElementById('m-timeline');
+        t.innerHTML = c.history.length ? c.history.map(h=>`<div class="timeline-item"><div class="timeline-date">${h.date}</div><div class="timeline-text">${h.text}</div></div>`).join('') : '<div class="text-muted small p-2">Sin historial.</div>';
+    }
+
+    // GESTIÓN
+    function createCampaign() {
+        const name = document.getElementById('c-name').value;
+        const start = document.getElementById('c-start').value;
+        const end = document.getElementById('c-end').value;
+        const desc = document.getElementById('c-desc').value;
+        if(!name || !start || !end) return alert("Completa los datos de campaña");
+
+        // Logic de filtros
+        const rubros = getChecks('rubro');
+        let count = 0;
+        db.forEach(c => {
+            if(!c.kanbanStatus && (rubros.length===0 || rubros.includes(c.rubro))) {
+                c.kanbanStatus = 'todo';
+                c.campaignName = name;
+                count++;
+            }
+        });
+        
+        if(count > 0) {
+            campaigns.push({name, start, end, details: desc});
+            saveData();
+            init();
+            alert(`${count} comercios agregados a ${name}`);
+        } else {
+            alert("No hay comercios nuevos que cumplan los filtros.");
+        }
+    }
+
+    function renderKanban() {
+        ['todo','contact','action'].forEach(s => document.getElementById('kb-'+s).innerHTML = '');
+        
+        db.filter(c => c.kanbanStatus && c.kanbanStatus !== 'done').forEach(c => {
+            const col = document.getElementById('kb-'+c.kanbanStatus);
+            if(col) {
+                const color = getColor(c.campaignName);
+                const card = document.createElement('div');
+                card.className = 'kanban-card';
+                card.setAttribute('data-id', c.id); // Tag for logic
+                card.onclick = (e) => { if(!e.target.closest('button')) openModal(c.id); };
+                
+                card.innerHTML = `
+                    <span class="campaign-tag" style="background:${color}">${c.campaignName}</span>
+                    <div class="kanban-card-title">${c.fantasyName}</div>
+                    <div class="kanban-card-details">${c.city} • ${c.rubro}</div>
+                    <div class="card-actions">
+                        <button class="btn btn-outline-secondary btn-sm btn-move" onclick="move(${c.id}, -1)"><i class="fas fa-chevron-left"></i></button>
+                        <button class="btn btn-outline-primary btn-sm btn-move" onclick="move(${c.id}, 1)"><i class="fas fa-chevron-right"></i></button>
+                    </div>`;
+                col.appendChild(card);
+            }
+        });
+        renderCalendar();
+        checkAlerts();
+    }
+
+    function move(id, dir) {
+        const c = db.find(x => x.id === id);
+        const flow = ['todo','contact','action','done'];
+        const idx = flow.indexOf(c.kanbanStatus);
+        const next = idx + dir;
+        if(next >= 0 && next < flow.length) {
+            c.kanbanStatus = flow[next];
+            saveData();
+            renderKanban();
+            updateKPIs();
+        }
+    }
+
+    function updateKPIs() {
+        const counts = {todo:0, contact:0, action:0, done:0};
+        db.forEach(c => { if(c.kanbanStatus) counts[c.kanbanStatus]++ });
+        
+        document.getElementById('cnt-todo').innerText = counts.todo;
+        document.getElementById('cnt-contact').innerText = counts.contact;
+        document.getElementById('cnt-action').innerText = counts.action;
+
+        document.getElementById('kpi-gestion').innerText = counts.todo + counts.contact;
+        document.getElementById('kpi-active').innerText = campaigns.length;
+        document.getElementById('kpi-closed').innerText = counts.action + counts.done;
+        document.getElementById('kpi-missing').innerText = "Faltan: " + (db.length - (counts.todo+counts.contact+counts.action+counts.done));
+    }
+
+    function checkAlerts() {
+        const box = document.getElementById('alerts-box');
+        box.innerHTML = '';
+        const today = new Date();
+        let has = false;
+        campaigns.forEach(c => {
+            const days = Math.ceil((new Date(c.end) - today) / (1000*60*60*24));
+            if(days >= 0 && days <= 3) {
+                has = true;
+                box.innerHTML += `<div class="alert-item"><div><strong>${c.name}</strong> <small class="text-danger-custom">Vence: ${days} días</small></div><span class="alert-link" onclick="openList('camp', '${c.name}')">Ver comercios</span></div>`;
+            }
+        });
+        if(!has) box.innerHTML = '<div class="p-2 small text-muted fst-italic">Sin vencimientos próximos</div>';
+    }
+
+    // DRILL DOWN & LIST
+    function openKpiList(type) {
+        let items = [], title = "";
+        if(type==='gestion') { title="En Gestión"; items = db.filter(c=>['todo','contact'].includes(c.kanbanStatus)); }
+        if(type==='closed') { title="Definidas"; items = db.filter(c=>['action','done'].includes(c.kanbanStatus)); }
+        if(type==='active') { 
+            // Lista de Campañas
+            title="Campañas Activas"; 
+            items = campaigns.map(c=>({isCamp:true, name:c.name, sub:`${c.start} al ${c.end}`})); 
+        }
+        
+        const content = document.getElementById('l-content');
+        content.innerHTML = '';
+        document.getElementById('l-title').innerText = title;
+
+        items.forEach(i => {
+            let onclick = i.isCamp ? `openList('camp', '${i.name}')` : `openModal(${i.id}); bootstrap.Modal.getInstance(document.getElementById('listModal')).hide();`;
+            let name = i.isCamp ? i.name : i.fantasyName;
+            let sub = i.isCamp ? i.sub : (i.kanbanStatus ? `Estado: ${i.kanbanStatus}` : i.rubro);
+
+            content.innerHTML += `<a class="list-group-item list-group-item-action" onclick="${onclick}">
+                <div class="fw-bold">${name}</div><small class="text-muted">${sub}</small>
+            </a>`;
+        });
+        new bootstrap.Modal(document.getElementById('listModal')).show();
+    }
+
+    function openList(type, filter) {
+        if(type==='camp') {
+            const items = db.filter(c => c.campaignName === filter);
+            const content = document.getElementById('l-content');
+            content.innerHTML = '';
+            document.getElementById('l-title').innerText = "Campaña: " + filter;
+            items.forEach(c => {
+                content.innerHTML += `<a class="list-group-item list-group-item-action" onclick="openModal(${c.id}); bootstrap.Modal.getInstance(document.getElementById('listModal')).hide();">
+                    <div class="fw-bold">${c.fantasyName}</div><small class="text-muted">${c.kanbanStatus}</small>
+                </a>`;
+            });
+            // Si el modal no estaba abierto, abrirlo
+            const el = document.getElementById('listModal');
+            if(!el.classList.contains('show')) new bootstrap.Modal(el).show();
+        }
+    }
+
+    // HELPERS
+    function switchTab(t) {
+        document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+        event.target.classList.add('active');
+        ['clients','campaigns','management'].forEach(s => document.getElementById(s+'-section').style.display = s===t?'block':'none');
+    }
+    function filterTable() { curPage=1; renderTable(); }
+    function getChecks(n) { return Array.from(document.querySelectorAll(`.${n}-check:checked`)).map(e=>e.value); }
+    function getColor(n) { let h=0; for(let i=0;i<n.length;i++)h=n.charCodeAt(i)+((h<<5)-h); return ['#0d6efd','#6610f2','#dc3545','#198754'][Math.abs(h)%4]; }
+    function renderCamps() {
+        // Campañas fijas (tarjetas)
+        const c = document.getElementById('campaigns-grid'); c.innerHTML='';
+        const camps = [
+            {t:'Migración',d:'Arancel 6.5%',b:'bg-migracion'},{t:'12 Cuotas',d:'Arancel 22%',b:'bg-ticket-alto'},{t:'Promo Zeta',d:'Arancel 2.15%',b:'bg-retencion'}
+        ]; // Simplificado
+        camps.forEach(x => c.innerHTML += `<div class="col-md-4"><div class="card h-100 shadow-sm border-start border-4 border-warning"><div class="card-body"><span class="badge ${x.b} mb-2">${x.t}</span><p class="small">${x.d}</p></div></div></div>`);
+    }
+    function renderCalendar() {
+        const b = document.getElementById('cal-body'); b.innerHTML='';
+        document.getElementById('cal-header').innerHTML = Array.from({length:31},(_,i)=>`<div class="cal-day-header">${i+1}</div>`).join('');
+        campaigns.forEach(c => {
+            const start = parseInt(c.start.split('-')[2]); const end = parseInt(c.end.split('-')[2]);
+            const w = ((end-start+1)/31)*100; const l = ((start-1)/31)*100;
+            b.innerHTML += `<div class="cal-campaign-bar" style="margin-left:${l}%; width:${w}%; background:${getColor(c.name)}">${c.name}</div>`;
+        });
+    }
+    function popFilters() {
+        const unique = (k) => [...new Set(db.map(x=>x[k]))].sort();
+        ['rubro','city','bank'].forEach(k => {
+            const div = document.getElementById('f-'+k); div.innerHTML='';
+            unique(k).forEach((v,i) => div.innerHTML+=`<div class="form-check"><input class="form-check-input ${k}-check" type="checkbox" value="${v}" id="${k}${i}"><label class="form-check-label" for="${k}${i}">${v}</label></div>`);
+        });
+    }
+
+    // Dummy Gen
+    function genDummy() {
+        const names = ["Electro Mundo","Moda Style","Farmacia Plus","La Granja","Tecno Store"];
+        const cities = ["Córdoba","Rosario","Paraná"];
+        for(let i=1; i<=302; i++) {
+            const tpv = Math.floor(Math.random()*50000000);
+            db.push({
+                id:i, cuit:`30-${10000000+i}-1`, fantasyName: names[i%names.length]+" "+i, businessName: names[i%names.length]+" SA",
+                rubro: ['Indumentaria','Electrodomésticos','Gastronomía'][i%3], city: cities[i%3], bank: 'Galicia', address:'Av Colon 123',
+                tpv: tpv, coupons: 150, avgTicket: tpv/150, merchantIds:[1000+i],
+                monthlyStats: months.map(m=>({month:m, tpv:tpv/12})), history: [], kanbanStatus:null, campaignName:null
+            });
+        }
+    }
+</script>
+</body>
+</html>
